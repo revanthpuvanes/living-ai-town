@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ai_town
+      POSTGRES_USER: town
+      POSTGRES_PASSWORD: local_dev_only
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - town_pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U town -d ai_town"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+volumes:
+  town_pgdata:
