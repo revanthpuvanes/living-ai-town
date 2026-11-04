@@ -67,6 +67,9 @@ def record_move(
     character_id: str,
     destination: str,
     duration_ticks: int,
+    *,
+    expected_tick: int | None = None,
+    expected_state_hash: str | None = None,
 ):
     action_id = UUID(str(action_id))
 
@@ -76,7 +79,7 @@ def record_move(
             # Serialize requests through the world row lock.
             cur.execute(
                 """
-                SELECT current_tick, state
+                SELECT current_tick, state, state_hash
                 FROM world_state
                 WHERE id = 1
                 FOR UPDATE
@@ -87,7 +90,7 @@ def record_move(
             if row is None:
                 raise RuntimeError("World has not been initialized")
 
-            current_tick, state = row
+            current_tick, state, current_hash = row
 
             proposed_action = {
                 "action": "move",
@@ -182,6 +185,21 @@ def record_move(
                     "duplicate": True,
                     "reason": result.removeprefix("rejected: "),
                 }
+
+            # Existing action IDs are handled above so retries remain
+            # idempotent even after the world has advanced.
+            if expected_tick is not None and current_tick != expected_tick:
+                raise InvalidAction(
+                    "Stale observation: world tick changed"
+                )
+
+            if (
+                expected_state_hash is not None
+                and current_hash.strip() != expected_state_hash
+            ):
+                raise InvalidAction(
+                    "Stale observation: world state changed"
+                )
 
             try:
                 updated = start_move(

@@ -31,6 +31,10 @@ def apply_event(state, event):
             payload["duration_ticks"],
         )
 
+    if event_type == "CONVERSATION_SPOKEN":
+        from app.engine.conversations import apply_conversation
+        return apply_conversation(state, event)
+
     if event_type == "TICK_ADVANCED":
         if payload["tick"] != state["tick"] + 1:
             raise ValueError("Unexpected tick sequence")
