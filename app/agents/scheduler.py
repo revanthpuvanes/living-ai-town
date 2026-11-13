@@ -1,10 +1,14 @@
+from app.db.visitor_replies import reply_to_pending_visitors
 from dataclasses import dataclass
 from uuid import UUID, uuid5
 
 from app.agents.decisions import DeterministicAgent
 from app.agents.interactions import run_interactions
+from app.agents.replies import process_reply
+from app.db.conversations import get_pending_auto_replies
 from app.agents.observations import observe_character
 from app.agents.runner import run_agent_once
+from app.db.scheduler_lock import try_scheduler_lock
 from app.db.idempotent_ticks import advance_tick_once
 from app.db.repository import get_world_state
 
@@ -44,6 +48,18 @@ def preview_cycle():
 
 
 def run_cycle(*, execute: bool = False):
+    if execute:
+        with try_scheduler_lock() as acquired:
+            if not acquired:
+                raise RuntimeError(
+                    "Another scheduler cycle is already running"
+                )
+            return _run_cycle_impl(execute=True)
+
+    return _run_cycle_impl(execute=False)
+
+
+def _run_cycle_impl(*, execute: bool):
     before = get_world_state()
     start_tick = before["tick"]
 
@@ -58,10 +74,21 @@ def run_cycle(*, execute: bool = False):
             ),
         )
 
-    # Talk first, before anyone leaves a shared location.
+    # Respond to pending visitor messages.
+    reply_to_pending_visitors(limit=5)
+
+    # Recover unfinished replies before characters move.
+    for opening in get_pending_auto_replies(start_tick):
+        process_reply(opening)
+
+    # Start new conversations while characters are together.
     interactions = tuple(
         run_interactions(execute=True)
     )
+
+    # Complete newly opened conversations before movement.
+    for opening in get_pending_auto_replies(start_tick):
+        process_reply(opening)
 
     # Then let each character make a movement decision.
     results = []

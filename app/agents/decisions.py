@@ -24,8 +24,8 @@ ROUTINES = {
     ),
     "sophia": (
         (0, "shop"),
-        (12, "square"),
-        (18, "shop"),
+        (6, "square"),
+        (12, "shop"),
     ),
 }
 

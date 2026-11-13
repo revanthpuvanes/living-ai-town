@@ -18,6 +18,7 @@ def record_conversation(
     expected_state_hash: str | None = None,
     auto_pair_day: str | None = None,
     llm_generation=None,
+    reply_to_event_id: int | None = None,
 ):
     action_id = UUID(str(action_id))
 
@@ -30,6 +31,13 @@ def record_conversation(
 
     if auto_pair_day is not None:
         proposed_action["auto_pair_day"] = auto_pair_day
+
+    if reply_to_event_id is not None:
+        if not isinstance(reply_to_event_id, int) or reply_to_event_id <= 0:
+            raise ValueError("Invalid reply event ID")
+        if auto_pair_day is not None:
+            raise ValueError("Replies cannot reuse auto_pair_day")
+        proposed_action["reply_to_event_id"] = reply_to_event_id
 
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -152,6 +160,26 @@ def record_conversation(
                         "event_id": previous_pair[0],
                     }
 
+            if reply_to_event_id is not None:
+                cur.execute("""
+                    SELECT actor, payload
+                    FROM events
+                    WHERE id = %s
+                      AND type = 'CONVERSATION_SPOKEN'
+                """, (reply_to_event_id,))
+                parent = cur.fetchone()
+
+                if parent is None:
+                    raise InvalidAction("Reply parent event not found")
+
+                parent_speaker, parent_payload = parent
+
+                if (
+                    parent_speaker != listener_id
+                    or parent_payload["listener"] != speaker_id
+                ):
+                    raise InvalidAction("Reply participants do not match")
+
             location = state["characters"][speaker_id]["location"]
 
             cur.execute("""
@@ -171,9 +199,9 @@ def record_conversation(
             cur.execute("""
                 INSERT INTO events (
                     action_id, tick_id, actor,
-                    type, payload, rules_version
+                    type, payload, rules_version, depends_on
                 )
-                VALUES (%s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
                 action_id,
@@ -186,12 +214,18 @@ def record_conversation(
                     "tick": tick,
                     "location": location,
                     **(
+                        {"reply_to_event_id": reply_to_event_id}
+                        if reply_to_event_id is not None
+                        else {}
+                    ),
+                    **(
                         {"auto_pair_day": auto_pair_day}
                         if auto_pair_day is not None
                         else {}
                     ),
                 }),
                 RULES_VERSION,
+                [reply_to_event_id] if reply_to_event_id is not None else [],
             ))
 
             event_id = cur.fetchone()[0]
@@ -239,6 +273,48 @@ def get_recent_conversations(character_id: str, limit: int = 20):
                 ORDER BY id DESC
                 LIMIT %s
             """, (character_id, character_id, limit))
+
+            rows = cur.fetchall()
+
+    return [
+        {
+            "event_id": row[0],
+            "tick": row[1],
+            "speaker": row[2],
+            "listener": row[3]["listener"],
+            "message": row[3]["message"],
+            "location": row[3]["location"],
+        }
+        for row in rows
+    ]
+
+
+def get_pending_auto_replies(tick: int):
+    """Find automatic openings that do not yet have a reply."""
+    day_start = (tick // 24) * 24
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    opening.id,
+                    opening.tick_id,
+                    opening.actor,
+                    opening.payload
+                FROM events AS opening
+                WHERE opening.type = 'CONVERSATION_SPOKEN'
+                  AND opening.payload ? 'auto_pair_day'
+                  AND opening.tick_id >= %s
+                  AND opening.tick_id <= %s
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM events AS reply
+                      WHERE reply.type = 'CONVERSATION_SPOKEN'
+                        AND reply.payload->>'reply_to_event_id'
+                            = opening.id::text
+                  )
+                ORDER BY opening.id
+            """, (day_start, tick))
 
             rows = cur.fetchall()
 

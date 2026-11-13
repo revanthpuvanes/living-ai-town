@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ai_town_prod
+      POSTGRES_USER: town
+      POSTGRES_PASSWORD: ${TOWN_DB_PASSWORD:?Set TOWN_DB_PASSWORD}
+    volumes:
+      - prod_pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U town -d ai_town_prod"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+
+  init:
+    build: .
+    command: >
+      sh -c "python -m scripts.migrate &&
+             python -c 'from app.db.repository import initialize_world; initialize_world()'"
+    environment:
+      DATABASE_URL: postgresql://town:${TOWN_DB_PASSWORD}@postgres:5432/ai_town_prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://town:${TOWN_DB_PASSWORD}@postgres:5432/ai_town_prod
+    ports:
+      - "127.0.0.1:8002:8000"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: python -m scripts.run_production_worker
+    environment:
+      DATABASE_URL: postgresql://town:${TOWN_DB_PASSWORD}@postgres:5432/ai_town_prod
+      AI_TOWN_ENABLE_LLM: "1"
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:?Set MISTRAL_API_KEY}
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  prod_pgdata:

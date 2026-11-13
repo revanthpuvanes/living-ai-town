@@ -23,7 +23,7 @@ def test_all_three_agents_produce_three_pairs():
     for character in state["characters"].values():
         character["location"] = "square"
 
-    assert len(find_interactions(state)) == 3
+    assert len(find_interactions(state)) == 1
 
 
 def test_moving_character_cannot_talk():

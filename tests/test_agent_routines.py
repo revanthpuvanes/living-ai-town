@@ -17,8 +17,8 @@ from app.agents.decisions import (
         ("noah", 5, "school"),
         ("noah", 6, "square"),
         ("noah", 18, "school"),
-        ("sophia", 11, "shop"),
-        ("sophia", 12, "square"),
+        ("sophia", 11, "square"),
+        ("sophia", 12, "shop"),
         ("sophia", 24, "shop"),
     ],
 )

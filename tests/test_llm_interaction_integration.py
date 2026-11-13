@@ -24,7 +24,7 @@ def mock_interaction_lock():
 
 def fake_world():
     return {
-        "tick": 57,
+        "tick": 9,
         "state_hash": "test-hash",
         "state": {
             "characters": {

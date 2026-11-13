@@ -20,8 +20,11 @@ AGENT_IDS = ("emma", "noah", "sophia")
 
 DIALOGUE = {
     ("emma", "noah"): "Good morning, Noah! How are your students?",
+    ("noah", "emma"): "Good morning, Emma! How is the bakery?",
     ("emma", "sophia"): "Hello Sophia! How is the shop today?",
+    ("sophia", "emma"): "Hello Emma! How is the bakery doing?",
     ("noah", "sophia"): "Hello Sophia! How is business going?",
+    ("sophia", "noah"): "Hello Noah! How are things at school?",
 }
 
 
@@ -34,11 +37,28 @@ class InteractionResult:
     result: dict | None
 
 
-def find_interactions(state: dict):
+def find_interactions(state: dict, tick: int = 0):
     characters = state["characters"]
     interactions = []
 
-    for speaker, listener in combinations(AGENT_IDS, 2):
+    day = tick // 24
+
+    daily_pairs = (
+        ("emma", "noah"),
+        ("noah", "sophia"),
+        ("sophia", "emma"),
+    )
+    selected_pair = daily_pairs[day % len(daily_pairs)]
+
+    for first_id,second_id in combinations(AGENT_IDS,2):
+        if frozenset((first_id, second_id)) != frozenset(selected_pair):
+            continue
+        # Rotate who initiates each pair's conversation by day.
+        if day % 2 == 0:
+            speaker, listener = first_id, second_id
+        else:
+            speaker, listener = second_id, first_id
+
         first = characters[speaker]
         second = characters[listener]
 
@@ -104,7 +124,7 @@ def run_interactions(*, execute: bool = False):
     results = []
 
     for speaker, listener, default_message in find_interactions(
-        world["state"]
+        world["state"], tick=tick
     ):
         day = tick // 24
 
