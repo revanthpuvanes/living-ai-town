@@ -91,3 +91,32 @@ def visitor_message(request: VisitorMessageRequest):
             status_code=503,
             detail="World not initialized",
         )
+
+
+# Two-minute on-demand simulation
+
+from app.db.demo_session import (
+    ensure_session_table,
+    get_session,
+    start_session,
+)
+
+
+@app.get("/api/simulation")
+def simulation_status():
+    ensure_session_table()
+    return get_session()
+
+
+@app.post("/api/simulation/start")
+def simulation_start():
+    ensure_session_table()
+    return start_session()
+
+
+@app.post("/api/simulation/stop")
+def simulation_stop():
+    from app.db.demo_session import stop_session
+
+    ensure_session_table()
+    return stop_session()

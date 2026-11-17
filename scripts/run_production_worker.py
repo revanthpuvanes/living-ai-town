@@ -1,4 +1,4 @@
-"""Continuous Living AI Town production worker."""
+"""On-demand Living AI Town production worker."""
 
 import os
 import signal
@@ -8,9 +8,11 @@ from urllib.parse import urlparse
 
 from app.agents.scheduler import run_cycle
 from app.db.repository import get_world_state
+from app.db.demo_session import ensure_session_table, get_session
 
 
-INTERVAL_SECONDS = 10
+INTERVAL_SECONDS = 3
+SESSION_SECONDS = 120
 EXPECTED_DATABASE = "ai_town_prod"
 
 
@@ -43,32 +45,46 @@ def main():
 
     print("Living AI Town production worker started", flush=True)
     print("Starting tick:", get_world_state()["tick"], flush=True)
-    print("Interval: 10 seconds", flush=True)
+    print("Interval: 3 seconds", flush=True)
+
+    ensure_session_table()
 
     while not stopping:
-        started = time.monotonic()
-
         try:
+            session = get_session()
+
+            if not session["active"]:
+                time.sleep(1)
+                continue
+
+            started = time.monotonic()
+
             result = run_cycle(execute=True)
             print(
                 f"Tick {result.start_tick} -> {result.end_tick}, "
                 f"conversations: {len(result.interaction_results)}",
                 flush=True,
             )
+
+            while not stopping:
+                if not get_session()["active"]:
+                    break
+
+                remaining = INTERVAL_SECONDS - (
+                    time.monotonic() - started
+                )
+                if remaining <= 0:
+                    break
+
+                time.sleep(min(0.2, remaining))
+
         except Exception as exc:
             print(
                 f"Cycle error: {type(exc).__name__}: {exc}",
                 file=sys.stderr,
                 flush=True,
             )
-
-        while not stopping:
-            remaining = INTERVAL_SECONDS - (
-                time.monotonic() - started
-            )
-            if remaining <= 0:
-                break
-            time.sleep(min(0.2, remaining))
+            time.sleep(1)
 
     print("Worker stopped safely", flush=True)
 

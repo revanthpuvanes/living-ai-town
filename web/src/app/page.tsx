@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import SimulationControls from "./SimulationControls";
 
 const GameCanvas = dynamic(
   () => import("@/game/GameCanvas"),
@@ -24,6 +25,8 @@ export default function Home() {
             2D Game World
           </span>
         </header>
+
+        <SimulationControls />
 
         <GameCanvas />
 
