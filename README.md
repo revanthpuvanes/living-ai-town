@@ -4,9 +4,8 @@
 
 ### A Persistent, Event-Sourced Multi-Agent World
 
-**A living simulation where AI characters follow daily routines, interact with one another, respond to visitors, and inhabit a persistent, replayable world.**
+*A living simulation where AI characters follow daily routines, interact with one another, respond to visitors, and inhabit a persistent, replayable world.*
 
-Built with **Python · FastAPI · PostgreSQL · Mistral AI · Next.js · Phaser · Docker · Google Cloud · Vercel**
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -16,13 +15,15 @@ Built with **Python · FastAPI · PostgreSQL · Mistral AI · Next.js · Phaser 
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Backend-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/)
 [![Vercel](https://img.shields.io/badge/Vercel-Frontend-000000?logo=vercel&logoColor=white)](https://vercel.com/)
 
-**<a href="https://living-ai-town.vercel.app/">
+<a href="https://living-ai-town.vercel.app/">
   <img src="https://img.shields.io/badge/🚀_LAUNCH-LIVE_DEMO-8A2BE2?style=for-the-badge&labelColor=151B2B" alt="Launch Live Demo" height="55"/>
 </a>
 
 <br/>
 
-**🌐 [Experience the Living AI Town Simulation](https://living-ai-town.vercel.app/)****
+**🌐 [Experience the Living AI Town Simulation](https://living-ai-town.vercel.app/)**
+
+<img width="1647" height="957" alt="Screenshot from 2026-11-18 04-45-10" src="https://github.com/user-attachments/assets/4344da26-2dec-46c4-89ef-d948f843f5a9" />
 
 </div>
 
@@ -689,7 +690,6 @@ Its current boundaries are intentional:
 - In-flight LLM requests may complete after a session stops.
 - The deployment uses a single VM rather than a highly available distributed cluster.
 - Database snapshots are not substitutes for external backups.
-- Public API usage requires monitoring to manage LLM and infrastructure costs.
 
 These limitations keep the implementation focused on **persistence, consistency, reproducibility, and controlled LLM integration**.
 
@@ -748,16 +748,5 @@ MSc Computer Science — EPITA, Paris
 
 AI Agent Engineering · Backend Systems · Data Engineering
 
-[GitHub](https://github.com/revanthpuvanes)
-
 ---
 
-<div align="center">
-
-### 🏙️ A world that remembers.
-
-*Persistent state. Deterministic execution. AI-generated interactions.*
-
-**Built to explore the engineering foundations of reliable AI-powered simulations.**
-
-</div>
